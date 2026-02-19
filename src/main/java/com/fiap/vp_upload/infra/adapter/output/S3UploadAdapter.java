@@ -2,10 +2,6 @@ package com.fiap.vp_upload.infra.adapter.output;
 
 import com.fiap.vp_upload.application.ports.output.S3UploadOutput;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
-import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmRequest;
-import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
-import com.fiap.vp_upload.infra.adapter.output.repository.UploadPartRepository;
-import com.fiap.vp_upload.infra.adapter.output.repository.UploadRepository;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.Upload;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
 import lombok.RequiredArgsConstructor;
@@ -32,14 +28,12 @@ public class S3UploadAdapter implements S3UploadOutput {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
-    private final UploadRepository uploadRepository;
-    private final UploadPartRepository uploadPartRepository;
 
     @Value("${aws.s3.bucket.video}")
     private String videoBucket;
 
     @Override
-    public StartUploadResponse startUpload(StartUploadRequest request) {
+    public Upload startUpload(StartUploadRequest request) {
 
         String uploadId = UUID.randomUUID().toString();
 
@@ -62,27 +56,17 @@ public class S3UploadAdapter implements S3UploadOutput {
         CreateMultipartUploadResponse response =
                 s3Client.createMultipartUpload(createRequest);
 
-        uploadRepository.save(
-                Upload.builder()
-                        .uploadId(UUID.fromString(uploadId))
-                        .s3UploadId(response.uploadId())
-                        .key(response.key())
-                        .userId(request.userId())
-                        .status("STARTED")
-                        .build()
-        );
-
-        return new StartUploadResponse(uploadId);
+        return Upload.builder()
+                .uploadId(UUID.fromString(uploadId))
+                .s3UploadId(response.uploadId())
+                .key(response.key())
+                .userId(request.userId())
+                .status("STARTED")
+                .build();
     }
 
     @Override
-    public void completeUpload(UUID uploadId) {
-
-        Upload upload = uploadRepository.findByUploadId(uploadId)
-                .orElseThrow(() -> new RuntimeException("Upload não encontrado"));
-
-        List<UploadPart> parts = uploadPartRepository
-                .findByUploadIdOrderByPartNumber(uploadId);
+    public void completeUpload(Upload upload, List<UploadPart> parts) {
 
         if (parts.isEmpty()) {
             throw new RuntimeException("Nenhuma parte enviada");
@@ -109,16 +93,10 @@ public class S3UploadAdapter implements S3UploadOutput {
                         .build();
 
         s3Client.completeMultipartUpload(completeRequest);
-
-        upload.setStatus("COMPLETED");
-        uploadRepository.save(upload);
     }
 
     @Override
-    public String generatePresignedUrl(UUID uploadId, int partNumber) {
-
-        Upload upload = uploadRepository.findById(uploadId)
-                .orElseThrow();
+    public String generatePresignedUrl(Upload upload, int partNumber) {
 
         UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
                 .bucket(videoBucket)
@@ -136,15 +114,6 @@ public class S3UploadAdapter implements S3UploadOutput {
                 );
 
         return presignedRequest.url().toString();
-    }
-
-    @Override
-    public void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest) {
-        uploadPartRepository.save(UploadPart.builder()
-                .partNumber(uploadPartConfirmRequest.partNumber())
-                .uploadId(uploadId)
-                .eTag(uploadPartConfirmRequest.eTag())
-                .build());
     }
 
     private String extractExtension(String fileName) {

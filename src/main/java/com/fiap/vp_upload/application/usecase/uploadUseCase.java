@@ -11,7 +11,5 @@ public interface uploadUseCase {
 
     void completeUpload(UUID uploadId);
 
-    String generatePresignedUrl(UUID uploadId, int partNumber);
-
     void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest);
 }

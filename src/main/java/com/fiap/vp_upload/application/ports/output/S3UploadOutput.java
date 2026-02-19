@@ -1,17 +1,15 @@
 package com.fiap.vp_upload.application.ports.output;
 
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
-import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmRequest;
-import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
+import com.fiap.vp_upload.infra.adapter.output.repository.entities.Upload;
+import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
 
-import java.util.UUID;
+import java.util.List;
 
 public interface S3UploadOutput {
-    StartUploadResponse startUpload(StartUploadRequest request);
+    Upload startUpload(StartUploadRequest request);
 
-    void completeUpload(UUID uploadId);
+    void completeUpload(Upload upload, List<UploadPart> parts);
 
-    String generatePresignedUrl(UUID uploadId, int partNumber);
-
-    void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest);
+    String generatePresignedUrl(Upload upload, int partNumber);
 }

@@ -8,12 +8,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -39,19 +37,10 @@ public class UploadController {
         return ResponseEntity.accepted().body("Upload finalizado com sucesso!");
     }
 
-    @GetMapping("/{uploadId}/presign")
-    public ResponseEntity<?> presignPart(
-            @PathVariable String uploadId,
-            @RequestParam int partNumber
-    ) {
-        String url = uploadUseCase.generatePresignedUrl(UUID.fromString(uploadId), partNumber);
-        return ResponseEntity.ok(url);
-    }
-
     @PostMapping("/{uploadId}/part/confirm")
     public ResponseEntity<?> confirmPart(@PathVariable String uploadId, @RequestBody UploadPartConfirmRequest uploadPartConfirmRequest) {
         uploadUseCase.confirmPartUpload(UUID.fromString(uploadId), uploadPartConfirmRequest);
-        return ResponseEntity.ok("Parte gravada!");
+        return ResponseEntity.accepted().build();
     }
 
 }
