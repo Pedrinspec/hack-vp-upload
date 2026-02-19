@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Multipart S3</title>
+</head>
+<body>
+
+<h2>Upload de Vídeo (Multipart S3)</h2>
+
+<input id="userIdInput" name="user-id" placeholder="ID do usuário" type="text">
+<button onclick="generateUserId()" type="button">
+    Gerar novo UserId
+</button>
+<br><br>
+<input accept="video/*" id="videoInput" type="file"/>
+<br><br>
+<button onclick="startUpload()">Enviar</button>
+
+<p id="status"></p>
+
+<script>
+    function generateUserId() {
+        const uuid = crypto.randomUUID();
+        document.getElementById("userIdInput").value = uuid;
+    }
+
+    const API_BASE = "http://localhost:8080/api/upload";
+
+const MIN_CHUNK_SIZE = 8 * 1024 * 1024;  // 8MB
+const MAX_PARALLEL_UPLOADS = 4;
+const MAX_RETRIES = 3;
+
+async function startUpload() {
+
+    const file = document.getElementById("videoInput").files[0];
+    if (!file) {
+        alert("Selecione um vídeo");
+        return;
+    }
+
+    const userId = document.getElementById("userIdInput").value;
+
+    document.getElementById("status").innerText = "Iniciando upload...";
+
+    // 🔹 1️⃣ Start upload
+    const startResponse = await fetch(`${API_BASE}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            userId: userId,
+            originalFileName: file.name
+        })
+    });
+
+    const { uploadId } = await startResponse.json();
+
+    // 🔹 2️⃣ Calcular chunk inteligente
+    const dynamicChunkSize = Math.max(
+        MIN_CHUNK_SIZE,
+        Math.ceil(file.size / 10000)
+    );
+
+    const totalParts = Math.ceil(file.size / dynamicChunkSize);
+
+    let uploadedBytes = 0;
+
+    // 🔹 3️⃣ Criar lista de partes
+    const partsQueue = [];
+
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+
+        const start = (partNumber - 1) * dynamicChunkSize;
+        const end = Math.min(start + dynamicChunkSize, file.size);
+        const chunk = file.slice(start, end);
+
+        partsQueue.push({ partNumber, chunk });
+    }
+
+    // 🔹 4️⃣ Executor com paralelismo controlado
+    async function uploadWorker() {
+        while (partsQueue.length > 0) {
+
+            const { partNumber, chunk } = partsQueue.shift();
+
+            let attempt = 0;
+            let success = false;
+
+            while (!success && attempt < MAX_RETRIES) {
+                try {
+
+                    // pedir presigned URL
+                    const presignResponse = await fetch(
+                        `${API_BASE}/${uploadId}/presign?partNumber=${partNumber}`
+                    );
+
+                    const presignedUrl = await presignResponse.text();
+
+                    const uploadResponse = await fetch(presignedUrl, {
+                        method: "PUT",
+                        body: chunk
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error("Falha upload parte " + partNumber);
+                    }
+
+                    const eTag = uploadResponse.headers.get("ETag");
+
+                    // confirmar no backend
+                    await fetch(`${API_BASE}/${uploadId}/part/confirm`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            partNumber,
+                            eTag
+                        })
+                    });
+
+                    uploadedBytes += chunk.size;
+
+                    const percent = ((uploadedBytes / file.size) * 100).toFixed(2);
+
+                    document.getElementById("status").innerText =
+                        `Upload ${percent}% concluído`;
+
+                    success = true;
+
+                } catch (err) {
+                    attempt++;
+                    console.log(`Retry parte ${partNumber} (${attempt})`);
+                    if (attempt >= MAX_RETRIES) {
+                        throw err;
+                    }
+                }
+            }
+        }
+    }
+
+    // 🔹 5️⃣ Criar pool de workers
+    const workers = [];
+    for (let i = 0; i < MAX_PARALLEL_UPLOADS; i++) {
+        workers.push(uploadWorker());
+    }
+
+    await Promise.all(workers);
+
+    // 🔹 6️⃣ Complete
+    document.getElementById("status").innerText = "Finalizando upload...";
+
+    await fetch(`${API_BASE}/${uploadId}/complete`, {
+        method: "POST"
+    });
+
+    document.getElementById("status").innerText =
+        "Upload concluído com sucesso 🎉";
+}
+
+</script>
+
+</body>
+</html>

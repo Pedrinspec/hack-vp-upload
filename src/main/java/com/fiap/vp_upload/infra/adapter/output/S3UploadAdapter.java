@@ -2,6 +2,7 @@ package com.fiap.vp_upload.infra.adapter.output;
 
 import com.fiap.vp_upload.application.ports.output.S3UploadOutput;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
+import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import com.fiap.vp_upload.infra.adapter.output.repository.UploadPartRepository;
 import com.fiap.vp_upload.infra.adapter.output.repository.UploadRepository;
@@ -10,8 +11,6 @@ import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
@@ -19,9 +18,11 @@ import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedUploadPartRequest;
+import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
 
-import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +31,7 @@ import java.util.UUID;
 public class S3UploadAdapter implements S3UploadOutput {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final UploadRepository uploadRepository;
     private final UploadPartRepository uploadPartRepository;
 
@@ -74,41 +76,6 @@ public class S3UploadAdapter implements S3UploadOutput {
     }
 
     @Override
-    public void uploadPart(UUID uploadId, int partNumber, MultipartFile file) {
-
-        Upload upload = uploadRepository.findByUploadId(uploadId)
-                .orElseThrow(() -> new RuntimeException("Upload não encontrado"));
-
-        try {
-
-            UploadPartRequest uploadPartRequest =
-                    UploadPartRequest.builder()
-                            .bucket(videoBucket)
-                            .key(upload.getKey())
-                            .uploadId(upload.getS3UploadId())
-                            .partNumber(partNumber)
-                            .build();
-
-            UploadPartResponse response = s3Client.uploadPart(
-                    uploadPartRequest,
-                    RequestBody.fromInputStream(
-                            file.getInputStream(),
-                            file.getSize()
-                    )
-            );
-
-            uploadPartRepository.save(UploadPart.builder()
-                    .partNumber(partNumber)
-                    .uploadId(uploadId)
-                    .eTag(response.eTag())
-                    .build());
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
     public void completeUpload(UUID uploadId) {
 
         Upload upload = uploadRepository.findByUploadId(uploadId)
@@ -145,6 +112,39 @@ public class S3UploadAdapter implements S3UploadOutput {
 
         upload.setStatus("COMPLETED");
         uploadRepository.save(upload);
+    }
+
+    @Override
+    public String generatePresignedUrl(UUID uploadId, int partNumber) {
+
+        Upload upload = uploadRepository.findById(uploadId)
+                .orElseThrow();
+
+        UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
+                .bucket(videoBucket)
+                .key(upload.getKey())
+                .uploadId(upload.getS3UploadId())
+                .partNumber(partNumber)
+                .build();
+
+        PresignedUploadPartRequest presignedRequest =
+                s3Presigner.presignUploadPart(
+                        UploadPartPresignRequest.builder()
+                                .signatureDuration(Duration.ofMinutes(10))
+                                .uploadPartRequest(uploadPartRequest)
+                                .build()
+                );
+
+        return presignedRequest.url().toString();
+    }
+
+    @Override
+    public void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest) {
+        uploadPartRepository.save(UploadPart.builder()
+                .partNumber(uploadPartConfirmRequest.partNumber())
+                .uploadId(uploadId)
+                .eTag(uploadPartConfirmRequest.eTag())
+                .build());
     }
 
     private String extractExtension(String fileName) {

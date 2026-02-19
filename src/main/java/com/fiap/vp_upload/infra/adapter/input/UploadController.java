@@ -2,21 +2,25 @@ package com.fiap.vp_upload.infra.adapter.input;
 
 import com.fiap.vp_upload.application.usecase.uploadUseCase;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
+import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/upload")
+@CrossOrigin(origins = "*")
+@RequestMapping("/api/upload")
 @Tag(name = "Upload", description = "Endpoints para upload de vídeos")
 @RequiredArgsConstructor
 public class UploadController {
@@ -29,20 +33,25 @@ public class UploadController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/part")
-    public ResponseEntity<?> uploadChunk(
-            @RequestParam String uploadId,
-            @RequestParam int partNumber,
-            @RequestParam MultipartFile file
-    ){
-        uploadUseCase.uploadPart(UUID.fromString(uploadId), partNumber, file);
-        return ResponseEntity.accepted().body("Parte recebida com sucesso!");
-    }
-
-    @PostMapping("/finish")
-    public ResponseEntity<?> finishUpload(@RequestParam String uploadId) {
+    @PostMapping("{uploadId}/complete")
+    public ResponseEntity<?> finishUpload(@PathVariable String uploadId) {
         uploadUseCase.completeUpload(UUID.fromString(uploadId));
         return ResponseEntity.accepted().body("Upload finalizado com sucesso!");
+    }
+
+    @GetMapping("/{uploadId}/presign")
+    public ResponseEntity<?> presignPart(
+            @PathVariable String uploadId,
+            @RequestParam int partNumber
+    ) {
+        String url = uploadUseCase.generatePresignedUrl(UUID.fromString(uploadId), partNumber);
+        return ResponseEntity.ok(url);
+    }
+
+    @PostMapping("/{uploadId}/part/confirm")
+    public ResponseEntity<?> confirmPart(@PathVariable String uploadId, @RequestBody UploadPartConfirmRequest uploadPartConfirmRequest) {
+        uploadUseCase.confirmPartUpload(UUID.fromString(uploadId), uploadPartConfirmRequest);
+        return ResponseEntity.ok("Parte gravada!");
     }
 
 }
