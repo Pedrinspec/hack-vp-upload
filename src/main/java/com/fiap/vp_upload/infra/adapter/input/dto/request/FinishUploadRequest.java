@@ -1,4 +1,4 @@
-package com.fiap.vp_upload.infra.adapter.input.dto;
+package com.fiap.vp_upload.infra.adapter.input.dto.request;
 
 import lombok.Data;
 

@@ -1,8 +1,7 @@
 package com.fiap.vp_upload.infra.adapter.input.mapper;
 
 import com.fiap.vp_upload.domain.model.FinishUpload;
-import com.fiap.vp_upload.infra.adapter.input.dto.FinishUploadRequest;
-import org.springframework.stereotype.Component;
+import com.fiap.vp_upload.infra.adapter.input.dto.request.FinishUploadRequest;
 
 public class FinishUploadMapper {
 

@@ -2,7 +2,7 @@ package com.fiap.vp_upload.infra.exceptions;
 
 import com.fiap.vp_upload.domain.exceptions.NoSuchChunkException;
 import com.fiap.vp_upload.domain.exceptions.UploadNotExistException;
-import com.fiap.vp_upload.infra.adapter.input.dto.CustomErrorResponseDto;
+import com.fiap.vp_upload.infra.adapter.input.dto.response.CustomErrorResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

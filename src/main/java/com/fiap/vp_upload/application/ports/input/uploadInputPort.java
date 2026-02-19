@@ -1,8 +1,9 @@
 package com.fiap.vp_upload.application.ports.input;
 
 import com.fiap.vp_upload.application.usecase.uploadUseCase;
-import com.fiap.vp_upload.domain.model.FinishUpload;
 import com.fiap.vp_upload.domain.service.UploadService;
+import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
+import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,12 +17,17 @@ public class uploadInputPort implements uploadUseCase {
     private final UploadService uploadService;
 
     @Override
-    public void uploadChunk(UUID uploadId, int chunkIndex, MultipartFile file) {
-        uploadService.uploadChunk(uploadId, chunkIndex, file);
+    public StartUploadResponse startUpload(StartUploadRequest request) {
+        return uploadService.startUpload(request);
     }
 
     @Override
-    public void finishUpload(FinishUpload finishUpload) {
-        uploadService.finishUpload(finishUpload);
+    public void uploadPart(UUID uploadId, int partNumber, MultipartFile file) {
+        uploadService.uploadPart(uploadId, partNumber, file);
+    }
+
+    @Override
+    public void completeUpload(UUID uploadId) {
+        uploadService.completeUpload(uploadId);
     }
 }
