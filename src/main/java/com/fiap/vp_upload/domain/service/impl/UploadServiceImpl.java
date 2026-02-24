@@ -1,9 +1,11 @@
 package com.fiap.vp_upload.domain.service.impl;
 
+import com.fiap.vp_upload.application.ports.output.MessageOutput;
 import com.fiap.vp_upload.application.ports.output.S3UploadOutput;
 import com.fiap.vp_upload.application.ports.output.UploadCacheOutput;
 import com.fiap.vp_upload.application.ports.output.UploadDataOutput;
 import com.fiap.vp_upload.domain.exceptions.InvalidPartNumberException;
+import com.fiap.vp_upload.domain.model.ProcessRequest;
 import com.fiap.vp_upload.domain.service.UploadService;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
@@ -23,6 +25,7 @@ public class UploadServiceImpl implements UploadService {
     private final S3UploadOutput s3UploadOutput;
     private final UploadDataOutput uploadDataOutput;
     private final UploadCacheOutput uploadCacheOutput;
+    private final MessageOutput messageOutput;
 
     @Override
     public StartUploadResponse startUpload(StartUploadRequest request) {
@@ -48,7 +51,7 @@ public class UploadServiceImpl implements UploadService {
         uploadCacheOutput.delete(uploadId.toString());
         upload.setStatus("COMPLETED");
         uploadDataOutput.save(upload);
-
+        messageOutput.sendProcessMessage(new ProcessRequest(uploadId, upload.getKey()));
     }
 
     private String generatePresignedUrl(Upload upload, int partNumber) {
