@@ -1,3 +1,37 @@
 spring:
   application:
     name: vp-upload
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/hackvp}
+    username: ${DATABASE_USER:root}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:60000}
+
+aws:
+  region: ${AWS_REGION:sa-east-1}
+  access-key: ${ACCESS_KEY}
+  access-secret: ${ACCESS_SECRET}
+  s3:
+    bucket:
+      video: ${S3_VIDEO_BUCKET:hack-vp-videos}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  producer:
+    topic: ${VIDEO_PROCESSOR_TOPIC:video-processor-topic}

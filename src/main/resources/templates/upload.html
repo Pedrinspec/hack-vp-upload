@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Multipart S3</title>
+</head>
+<body>
+
+<h2>Upload de Vídeo (Multipart S3)</h2>
+
+<input id="userIdInput" name="user-id" placeholder="ID do usuário" type="text">
+<button onclick="generateUserId()" type="button">
+    Gerar novo UserId
+</button>
+<br><br>
+<input accept="video/*" id="videoInput" type="file"/>
+<br><br>
+<button onclick="startUpload()">Enviar</button>
+
+<p id="status"></p>
+
+<script>
+    function generateUserId() {
+        const uuid = crypto.randomUUID();
+        document.getElementById("userIdInput").value = uuid;
+    }
+
+    const API_BASE = "http://localhost:8080/api/upload";
+
+    const CHUNK_SIZE = 16 * 1024 * 1024;  // 16MB
+    const MAX_PARALLEL_UPLOADS = 8;       // balanceado para múltiplos usuários
+    const MAX_RETRIES = 3;
+
+    async function startUpload() {
+        const file = document.getElementById("videoInput").files[0];
+        if (!file) {
+            alert("Selecione um vídeo");
+            return;
+        }
+
+        const userId = document.getElementById("userIdInput").value;
+        const statusEl = document.getElementById("status");
+        statusEl.innerText = "Iniciando upload...";
+
+        // 🔹 1️⃣ Start upload e obter todas as presigned URLs
+        const startResponse = await fetch(`${API_BASE}/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId,
+                originalFileName: file.name,
+                fileSize: file.size,
+                chunkSize: CHUNK_SIZE
+            })
+        });
+
+        const { uploadId, presignedUrls } = await startResponse.json();
+        const totalParts = presignedUrls.length;
+
+        // 🔹 2️⃣ Criar lista de partes
+        const partsQueue = [];
+        for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+            const start = (partNumber - 1) * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            partsQueue.push({ partNumber, chunk });
+        }
+
+        let uploadedBytes = 0;
+        let nextPart = 0;
+        const startTime = performance.now();
+
+        function updateProgress() {
+            const now = performance.now();
+            const elapsedSeconds = (now - startTime) / 1000;
+            const mbUploaded = uploadedBytes / (1024 * 1024);
+            const mbTotal = file.size / (1024 * 1024);
+            const speed = (mbUploaded / elapsedSeconds).toFixed(2); // MB/s
+            const percent = ((uploadedBytes / file.size) * 100).toFixed(2);
+
+            statusEl.innerText =
+                `Upload ${percent}% — ${mbUploaded.toFixed(2)} / ${mbTotal.toFixed(2)} MB — ${speed} MB/s`;
+        }
+
+        // 🔹 3️⃣ Worker de upload com retry e backoff simples
+        async function uploadWorker() {
+            while (true) {
+                let part;
+                if (nextPart < partsQueue.length) {
+                    part = partsQueue[nextPart];
+                    nextPart++;
+                } else {
+                    break;
+                }
+
+                let attempt = 0;
+                let success = false;
+
+                while (!success && attempt < MAX_RETRIES) {
+                    try {
+                        const url = presignedUrls[part.partNumber - 1];
+
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("PUT", url, true);
+                        xhr.timeout = 0; // sem timeout
+                        xhr.send(part.chunk);
+
+                        await new Promise((resolve, reject) => {
+                            xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve(xhr) : reject(new Error(`Falha upload parte ${part.partNumber}`));
+                            xhr.onerror = () => reject(new Error(`Erro rede parte ${part.partNumber}`));
+                            xhr.ontimeout = () => reject(new Error(`Timeout parte ${part.partNumber}`));
+                        });
+
+                        const eTag = xhr.getResponseHeader("ETag");
+
+                        // Confirmar parte no backend
+                        await fetch(`${API_BASE}/${uploadId}/part/confirm`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ partNumber: part.partNumber, eTag })
+                        });
+
+                        uploadedBytes += part.chunk.size;
+                        requestAnimationFrame(updateProgress);
+
+                        success = true;
+                    } catch (err) {
+                        attempt++;
+                        console.log(`Retry parte ${part.partNumber} (${attempt})`);
+                        if (attempt >= MAX_RETRIES) throw err;
+                        await new Promise(r => setTimeout(r, 500 * attempt));
+                    }
+                }
+            }
+        }
+
+        // 🔹 4️⃣ Criar pool de workers balanceada
+        const workers = [];
+        for (let i = 0; i < Math.min(MAX_PARALLEL_UPLOADS, partsQueue.length); i++) {
+            workers.push(uploadWorker());
+        }
+
+        await Promise.all(workers);
+
+        // 🔹 5️⃣ Completar upload
+        statusEl.innerText = "Finalizando upload...";
+        await fetch(`${API_BASE}/${uploadId}/complete`, { method: "POST" });
+
+        // Atualiza o status final
+        const totalMb = file.size / (1024 * 1024);
+        const totalTime = (performance.now() - startTime) / 1000;
+        const avgSpeed = (totalMb / totalTime).toFixed(2);
+
+        statusEl.innerText = `Upload concluído: ${totalMb.toFixed(2)} MB em ${totalTime.toFixed(2)}s — Média ${avgSpeed} MB/s 🎉`;
+    }
+</script>
+
+
+</body>
+</html>
