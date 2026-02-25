@@ -1,0 +1,164 @@
+# =============================================================================
+# VP-UPLOAD — Docker Compose
+# Orquestra: vp-upload app, MySQL 8, Redis 7, Kafka (KRaft)
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0 — Banco de dados principal
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: vp-upload-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD:-root}
+      MYSQL_DATABASE: hackvp
+      MYSQL_USER: ${DATABASE_USER:-vpuser}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - vp-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DATABASE_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — Cache de estado de upload
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: vp-upload-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Kafka — Mensageria (modo KRaft, sem Zookeeper) — imagem oficial Apache
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: apache/kafka:latest
+    container_name: vp-upload-kafka
+    restart: unless-stopped
+    environment:
+      # KRaft (sem Zookeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Tópicos e configuração geral
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+
+      # Cluster ID fixo para KRaft (base64url-encoded UUID)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - vp-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # VP-Upload Application — Spring Boot 4 + FFmpeg
+  # ---------------------------------------------------------------------------
+  vp-upload:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: vp-upload:latest
+    container_name: vp-upload-app
+    restart: unless-stopped
+    environment:
+      # Banco de dados
+      DATABASE_URL: jdbc:mysql://mysql:3306/hackvp?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DATABASE_USER: ${DATABASE_USER:-vpuser}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-root}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TIMEOUT: 60000
+
+      # Kafka
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VIDEO_PROCESSOR_TOPIC: ${VIDEO_PROCESSOR_TOPIC:-video-processor-topic}
+
+      # AWS S3 — obrigatório via .env
+      AWS_REGION: ${AWS_REGION:-sa-east-1}
+      ACCESS_KEY: ${ACCESS_KEY}
+      ACCESS_SECRET: ${ACCESS_SECRET}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      S3_VIDEO_BUCKET: ${S3_VIDEO_BUCKET:-hack-vp-videos}
+
+      # JVM tunning adicional
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - vp-network
+    volumes:
+      - app_logs:/app/logs
+
+# =============================================================================
+# Volumes persistentes
+# =============================================================================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
+  app_logs:
+    driver: local
+
+# =============================================================================
+# Rede interna isolada
+# =============================================================================
+networks:
+  vp-network:
+    driver: bridge
+    name: vp-network
