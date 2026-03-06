@@ -21,11 +21,16 @@
 
 <script>
     function generateUserId() {
-        const uuid = crypto.randomUUID();
+        const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
         document.getElementById("userIdInput").value = uuid;
     }
 
-    const API_BASE = "http://localhost:8080/api/upload";
+
+    const API_BASE = "/api/upload";
 
     const CHUNK_SIZE = 16 * 1024 * 1024;  // 16MB
     const MAX_PARALLEL_UPLOADS = 8;       // balanceado para múltiplos usuários
