@@ -11,6 +11,7 @@ import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.Upload;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
+import com.fiap.vp_upload.infra.adapter.output.repository.entities.enums.StatusEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,9 @@ public class UploadServiceImpl implements UploadService {
 
     @Override
     public StartUploadResponse startUpload(StartUploadRequest request) {
+
         Upload upload = s3UploadOutput.startUpload(request);
+        upload.setStatus(StatusEnum.UPLOADING);
         uploadDataOutput.save(upload);
         uploadCacheOutput.save(upload.getUploadId().toString(), upload, 48L);
 
@@ -47,16 +50,23 @@ public class UploadServiceImpl implements UploadService {
     @Override
     public void completeUpload(UUID uploadId, List<UploadPart> parts) {
         Upload upload = findUpload(uploadId);
-        s3UploadOutput.completeUpload(upload, parts);
-        uploadCacheOutput.delete(uploadId.toString());
-        upload.setStatus("COMPLETED");
-        uploadDataOutput.save(upload);
-        messageOutput.sendProcessMessage(new ProcessRequest(uploadId, upload.getKey()));
+        try {
+            s3UploadOutput.completeUpload(upload, parts);
+            uploadCacheOutput.delete(uploadId.toString());
+            upload.setStatus(StatusEnum.UPLOADED);
+            uploadDataOutput.save(upload);
+            messageOutput.sendProcessMessage(new ProcessRequest(uploadId, upload.getKey()));
+        } catch (RuntimeException e) {
+            upload.setStatus(StatusEnum.UPLOAD_ERROR);
+            uploadDataOutput.save(upload);
+        }
     }
 
     private String generatePresignedUrl(Upload upload, int partNumber) {
         if (partNumber < 1) {
-            throw new InvalidPartNumberException();
+            upload.setStatus(StatusEnum.UPLOAD_ERROR);
+            uploadDataOutput.save(upload);
+            throw new InvalidPartNumberException(upload.getUploadId());
         }
 
         return s3UploadOutput.generatePresignedUrl(upload, partNumber);

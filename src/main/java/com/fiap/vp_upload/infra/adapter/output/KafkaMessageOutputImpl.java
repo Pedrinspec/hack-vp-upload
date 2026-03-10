@@ -2,6 +2,7 @@ package com.fiap.vp_upload.infra.adapter.output;
 
 import com.fiap.vp_upload.application.ports.output.MessageOutput;
 import com.fiap.vp_upload.domain.model.ProcessRequest;
+import com.fiap.vp_upload.domain.model.UploadError;
 import com.google.gson.Gson;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -16,13 +17,22 @@ public class KafkaMessageOutputImpl implements MessageOutput {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final Gson gson;
 
-    @Value("${kafka.producer.topic}")
-    private String topic;
+    @Value("${kafka.producer.topic.processor}")
+    private String processorTopic;
+
+    @Value("${kafka.producer.topic.notification}")
+    private String notificationTopic;
 
     @Override
     public void sendProcessMessage(ProcessRequest processRequest) {
 
-        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, gson.toJson(processRequest));
+        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(processorTopic, gson.toJson(processRequest));
+        kafkaTemplate.send(producerRecord);
+    }
+
+    @Override
+    public void sendFailMessage(UploadError uploadError) {
+        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(notificationTopic, gson.toJson(uploadError));
         kafkaTemplate.send(producerRecord);
     }
 }

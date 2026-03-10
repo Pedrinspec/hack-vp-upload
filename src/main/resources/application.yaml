@@ -35,4 +35,6 @@ aws:
 kafka:
   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   producer:
-    topic: ${VIDEO_PROCESSOR_TOPIC:video-processor-topic}
+    topic:
+      processor: ${VIDEO_PROCESSOR_TOPIC:video-processor-topic}
+      notification: ${VIDEO_NOTIFICATION_TOPIC:VideoFailed.v1}

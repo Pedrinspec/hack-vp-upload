@@ -1,11 +1,14 @@
 package com.fiap.vp_upload.domain.exceptions;
 
-public class NoSuchChunkException extends RuntimeException {
-    public NoSuchChunkException() {
-        super("Contagem de chunks divergente");
+import lombok.Getter;
+
+import java.util.UUID;
+
+public class NoSuchChunkException extends GenericUploadException {
+
+
+    public NoSuchChunkException(UUID uploadId) {
+        super(uploadId, "Contagem de chunks divergente");
     }
 
-    public NoSuchChunkException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }

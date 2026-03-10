@@ -1,11 +1,10 @@
 package com.fiap.vp_upload.domain.exceptions;
 
-public class InvalidPartNumberException extends RuntimeException {
-    public InvalidPartNumberException() {
-        super("Quantidade de chunk inválida");
-    }
+import java.util.UUID;
 
-    public InvalidPartNumberException(String message, Throwable cause) {
-        super(message, cause);
+public class InvalidPartNumberException extends GenericUploadException {
+
+    public InvalidPartNumberException(UUID uploadId) {
+        super(uploadId, "Quantidade de chunk inválida");
     }
 }

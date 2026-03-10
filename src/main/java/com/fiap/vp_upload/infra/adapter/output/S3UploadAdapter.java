@@ -1,9 +1,12 @@
 package com.fiap.vp_upload.infra.adapter.output;
 
 import com.fiap.vp_upload.application.ports.output.S3UploadOutput;
+import com.fiap.vp_upload.domain.exceptions.NoSuchVideoExtensionException;
+import com.fiap.vp_upload.domain.exceptions.NoVideoPartsProvidedException;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.Upload;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
+import com.fiap.vp_upload.infra.adapter.output.repository.entities.enums.StatusEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -61,7 +64,7 @@ public class S3UploadAdapter implements S3UploadOutput {
                 .s3UploadId(response.uploadId())
                 .key(response.key())
                 .userId(request.userId())
-                .status("STARTED")
+                .status(StatusEnum.UPLOADING)
                 .build();
     }
 
@@ -69,7 +72,7 @@ public class S3UploadAdapter implements S3UploadOutput {
     public void completeUpload(Upload upload, List<UploadPart> parts) {
 
         if (parts.isEmpty()) {
-            throw new RuntimeException("Nenhuma parte enviada");
+            throw new NoVideoPartsProvidedException(upload.getUploadId());
         }
 
         List<CompletedPart> completedParts = parts.stream()
@@ -119,7 +122,7 @@ public class S3UploadAdapter implements S3UploadOutput {
     private String extractExtension(String fileName) {
         int lastDot = fileName.lastIndexOf(".");
         if (lastDot == -1) {
-            throw new IllegalArgumentException("Arquivo sem extensão");
+            throw new NoSuchVideoExtensionException();
         }
         return fileName.substring(lastDot + 1);
     }

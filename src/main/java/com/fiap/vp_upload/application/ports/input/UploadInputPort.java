@@ -1,6 +1,6 @@
 package com.fiap.vp_upload.application.ports.input;
 
-import com.fiap.vp_upload.application.usecase.uploadUseCase;
+import com.fiap.vp_upload.application.usecase.UploadUseCase;
 import com.fiap.vp_upload.domain.service.UploadPartService;
 import com.fiap.vp_upload.domain.service.UploadService;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class uploadInputPort implements uploadUseCase {
+public class UploadInputPort implements UploadUseCase {
 
     private final UploadService uploadService;
     private final UploadPartService uploadPartService;

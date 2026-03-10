@@ -6,7 +6,7 @@ import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 
 import java.util.UUID;
 
-public interface uploadUseCase {
+public interface UploadUseCase {
     StartUploadResponse startUpload(StartUploadRequest request);
 
     void completeUpload(UUID uploadId);
