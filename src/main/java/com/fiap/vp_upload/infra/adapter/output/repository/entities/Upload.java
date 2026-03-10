@@ -1,5 +1,6 @@
 package com.fiap.vp_upload.infra.adapter.output.repository.entities;
 
+import com.fiap.vp_upload.infra.adapter.output.repository.entities.enums.StatusEnum;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -33,6 +34,6 @@ public class Upload {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(name = "status_id", nullable = false)
-    private String status;
+    @Column(name = "status", nullable = false)
+    private StatusEnum status;
 }

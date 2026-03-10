@@ -1,6 +1,6 @@
 package com.fiap.vp_upload.infra.adapter.input;
 
-import com.fiap.vp_upload.application.usecase.uploadUseCase;
+import com.fiap.vp_upload.application.usecase.UploadUseCase;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
@@ -23,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UploadController {
 
-    private final uploadUseCase uploadUseCase;
+    private final UploadUseCase uploadUseCase;
 
     @PostMapping("/start")
     public ResponseEntity<?> startUpload(@RequestBody StartUploadRequest startUploadRequest) {
