@@ -6,6 +6,7 @@ import com.fiap.vp_upload.infra.adapter.input.dto.request.UploadPartConfirmReque
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,7 +35,7 @@ public class UploadController {
     @PostMapping("{uploadId}/complete")
     public ResponseEntity<?> finishUpload(@PathVariable String uploadId) {
         uploadUseCase.completeUpload(UUID.fromString(uploadId));
-        return ResponseEntity.accepted().body("Upload finalizado com sucesso!");
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/{uploadId}/part/confirm")
