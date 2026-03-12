@@ -43,5 +43,4 @@ public class UploadController {
         uploadUseCase.confirmPartUpload(UUID.fromString(uploadId), uploadPartConfirmRequest);
         return ResponseEntity.accepted().build();
     }
-
 }

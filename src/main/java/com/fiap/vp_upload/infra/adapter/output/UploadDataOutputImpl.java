@@ -6,6 +6,7 @@ import com.fiap.vp_upload.infra.adapter.output.repository.entities.Upload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,5 +24,10 @@ public class UploadDataOutputImpl implements UploadDataOutput {
     @Override
     public Optional<Upload> findByUploadId(UUID uploadId) {
         return uploadRepository.findByUploadId(uploadId);
+    }
+
+    @Override
+    public List<Upload> findByUserId(UUID userId) {
+        return uploadRepository.findByUserId(userId.toString());
     }
 }
