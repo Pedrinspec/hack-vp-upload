@@ -27,7 +27,11 @@
             return v.toString(16);
         });
         document.getElementById("userIdInput").value = uuid;
+        return uuid;
     }
+
+    // Auto-generate userId on page load
+    window.addEventListener('DOMContentLoaded', generateUserId);
 
 
     const API_BASE = "/api/upload";
@@ -43,7 +47,10 @@
             return;
         }
 
-        const userId = document.getElementById("userIdInput").value;
+        let userId = document.getElementById("userIdInput").value;
+        if (!userId) {
+            userId = generateUserId();
+        }
         const statusEl = document.getElementById("status");
         statusEl.innerText = "Iniciando upload...";
 

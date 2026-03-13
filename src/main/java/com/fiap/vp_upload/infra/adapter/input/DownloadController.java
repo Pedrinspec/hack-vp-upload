@@ -45,6 +45,9 @@ public class DownloadController {
 
     @GetMapping("/videos")
     public ResponseEntity<?> getVideoList(@RequestParam("user") String userId) {
+        if (userId == null || userId.isBlank()) {
+            return ResponseEntity.badRequest().body("userId is required");
+        }
         return ResponseEntity.ok(downloadUseCase.getVideoList(UUID.fromString(userId)));
     }
 }
