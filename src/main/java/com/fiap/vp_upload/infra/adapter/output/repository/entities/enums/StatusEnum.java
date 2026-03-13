@@ -8,7 +8,6 @@ import lombok.Getter;
 public enum StatusEnum {
     UPLOADING("uploading", "carregando"),
     UPLOADED("uploaded", "carregado"),
-    IN_QUEUE("in queue", "na fila"),
     PROCESSING("processing", "processando"),
     PROCESSED("processed", "processado"),
     UPLOAD_ERROR("upload error", "erro no carregamento"),

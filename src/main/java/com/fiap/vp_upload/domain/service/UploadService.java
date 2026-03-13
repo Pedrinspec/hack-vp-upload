@@ -1,5 +1,6 @@
 package com.fiap.vp_upload.domain.service;
 
+import com.fiap.vp_upload.domain.model.StatusUpdate;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
 import com.fiap.vp_upload.infra.adapter.output.repository.entities.UploadPart;
@@ -14,4 +15,6 @@ public interface UploadService {
     void completeUpload(UUID uploadId, List<UploadPart> parts);
 
     void reprocess(UUID uploadId);
+
+    void updateStatus(StatusUpdate statusUpdate);
 }

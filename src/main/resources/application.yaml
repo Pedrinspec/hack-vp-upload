@@ -37,6 +37,10 @@ aws:
 
 kafka:
   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  consumer:
+    upload-status: ${VIDEO_UPLOAD_TOPIC:VideoUpload.v1}
+    group-id: ${VIDEO_UPLOAD_GROUP_ID:video-upload}
+    auto-offset: ${AUTO_OFFSET_RESET_CONFIG:earliest}
   producer:
     topic:
       processor: ${VIDEO_PROCESSOR_TOPIC:video-processor-topic}

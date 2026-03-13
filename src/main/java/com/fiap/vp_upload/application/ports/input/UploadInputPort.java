@@ -1,6 +1,7 @@
 package com.fiap.vp_upload.application.ports.input;
 
 import com.fiap.vp_upload.application.usecase.UploadUseCase;
+import com.fiap.vp_upload.domain.model.StatusUpdate;
 import com.fiap.vp_upload.domain.service.UploadPartService;
 import com.fiap.vp_upload.domain.service.UploadService;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
@@ -40,5 +41,10 @@ public class UploadInputPort implements UploadUseCase {
     @Override
     public void reprocess(UUID uploadId) {
         uploadService.reprocess(uploadId);
+    }
+
+    @Override
+    public void updateStatus(StatusUpdate statusUpdate) {
+        uploadService.updateStatus(statusUpdate);
     }
 }

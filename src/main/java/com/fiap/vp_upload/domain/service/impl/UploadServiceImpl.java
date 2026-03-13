@@ -7,6 +7,7 @@ import com.fiap.vp_upload.application.ports.output.UploadDataOutput;
 import com.fiap.vp_upload.domain.exceptions.InvalidPartNumberException;
 import com.fiap.vp_upload.domain.exceptions.UploadNotExistException;
 import com.fiap.vp_upload.domain.model.ProcessRequest;
+import com.fiap.vp_upload.domain.model.StatusUpdate;
 import com.fiap.vp_upload.domain.service.UploadService;
 import com.fiap.vp_upload.infra.adapter.input.dto.request.StartUploadRequest;
 import com.fiap.vp_upload.infra.adapter.input.dto.response.StartUploadResponse;
@@ -68,6 +69,14 @@ public class UploadServiceImpl implements UploadService {
         Upload upload = uploadDataOutput.findByUploadId(uploadId)
                 .orElseThrow(() -> new UploadNotExistException(uploadId.toString()));
         messageOutput.sendProcessMessage(new ProcessRequest(uploadId, upload.getKey()));
+    }
+
+    @Override
+    public void updateStatus(StatusUpdate statusUpdate) {
+        Upload upload = uploadDataOutput.findByUploadId(statusUpdate.getUploadId()).orElseThrow(() -> new UploadNotExistException(statusUpdate.getUploadId().toString()));
+
+        upload.setStatus(statusUpdate.getStatus());
+        uploadDataOutput.save(upload);
     }
 
     private String generatePresignedUrl(Upload upload, int partNumber) {

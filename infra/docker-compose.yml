@@ -28,6 +28,10 @@ services:
       # Kafka
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       VIDEO_PROCESSOR_TOPIC: ${VIDEO_PROCESSOR_TOPIC:-video-processor-topic}
+      VIDEO_NOTIFICATION_TOPIC: ${VIDEO_NOTIFICATION_TOPIC:-video.failed.v1}
+      VIDEO_UPLOAD_TOPIC: ${VIDEO_UPLOAD_TOPIC:-video.upload.status.v1}
+      VIDEO_UPLOAD_GROUP_ID: ${VIDEO_UPLOAD_GROUP_ID:-video-upload}
+      AUTO_OFFSET_RESET_CONFIG: ${AUTO_OFFSET_RESET_CONFIG:-earliest}
 
       # AWS S3 — obrigatório via .env
       AWS_REGION: ${AWS_REGION:-sa-east-1}
