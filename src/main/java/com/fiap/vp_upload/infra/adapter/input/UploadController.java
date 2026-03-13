@@ -43,4 +43,10 @@ public class UploadController {
         uploadUseCase.confirmPartUpload(UUID.fromString(uploadId), uploadPartConfirmRequest);
         return ResponseEntity.accepted().build();
     }
+
+    @PostMapping("/{uploadId}/reprocess")
+    public ResponseEntity<?> reprocess(@PathVariable String uploadId) {
+        uploadUseCase.reprocess(UUID.fromString(uploadId));
+        return ResponseEntity.accepted().build();
+    }
 }

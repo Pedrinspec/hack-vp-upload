@@ -36,4 +36,9 @@ public class UploadInputPort implements UploadUseCase {
     public void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest) {
         uploadPartService.confirmPartUpload(uploadId, uploadPartConfirmRequest);
     }
+
+    @Override
+    public void reprocess(UUID uploadId) {
+        uploadService.reprocess(uploadId);
+    }
 }

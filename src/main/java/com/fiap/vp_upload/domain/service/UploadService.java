@@ -12,4 +12,6 @@ public interface UploadService {
     StartUploadResponse startUpload(StartUploadRequest request);
 
     void completeUpload(UUID uploadId, List<UploadPart> parts);
+
+    void reprocess(UUID uploadId);
 }

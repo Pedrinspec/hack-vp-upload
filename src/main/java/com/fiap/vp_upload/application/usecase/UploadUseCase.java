@@ -12,4 +12,6 @@ public interface UploadUseCase {
     void completeUpload(UUID uploadId);
 
     void confirmPartUpload(UUID uploadId, UploadPartConfirmRequest uploadPartConfirmRequest);
+
+    void reprocess(UUID uploadId);
 }
