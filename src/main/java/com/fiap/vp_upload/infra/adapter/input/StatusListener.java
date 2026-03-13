@@ -15,7 +15,7 @@ public class StatusListener {
     private final Gson gson;
     private final UploadUseCase uploadUseCase;
 
-    @KafkaListener(groupId = "${kafka.consumer.group-id}", topics = {"${kafka.consumer.topic}"}, containerFactory = "customKafkaTemplate")
+    @KafkaListener(groupId = "${kafka.consumer.group-id}", topics = {"${kafka.consumer.upload-status}"}, containerFactory = "customKafkaTemplate")
     public void statusListener(String uploadStatusJson) {
         log.info("Mensagem recebida: {}", uploadStatusJson);
         StatusUpdate statusUpdate = gson.fromJson(uploadStatusJson, StatusUpdate.class);
